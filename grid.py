@@ -34,20 +34,49 @@ st.markdown("""
 # ==========================================
 # 2. LOAD DEPLOYMENT ARTIFACTS (ALL 8 MODELS)
 # ==========================================
+from pathlib import Path
+import traceback
+
 @st.cache_resource
 def load_artifacts():
-    # Load the dictionary payload containing models, scaler, and columns
-    artifacts = joblib.load('best_grid_model.pkl')
-    return artifacts
+    model_path = Path(__file__).parent / "best_grid_model.pkl"
+
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Model file not found: {model_path}"
+        )
+
+    return joblib.load(model_path)
 
 try:
     artifacts = load_artifacts()
-    models_pool = artifacts['models_pool']
-    scaler = artifacts['scaler']
-    label_encoder = artifacts['label_encoder']
-    feature_columns = artifacts['feature_columns']
+
+    required_keys = [
+        "models_pool",
+        "scaler",
+        "label_encoder",
+        "feature_columns"
+    ]
+
+    missing = [k for k in required_keys if k not in artifacts]
+
+    if missing:
+        raise KeyError(
+            f"Missing keys in model file: {missing}"
+        )
+
+    models_pool = artifacts["models_pool"]
+    scaler = artifacts["scaler"]
+    label_encoder = artifacts["label_encoder"]
+    feature_columns = artifacts["feature_columns"]
+
 except Exception as e:
-    st.error(f"Error loading 'best_grid_model.pkl'. Make sure it is in the same directory as this script. Details: {e}")
+    st.error("Failed to load deployment artifacts.")
+    st.error(str(e))
+
+    with st.expander("Full Debug Traceback"):
+        st.code(traceback.format_exc())
+
     st.stop()
 
 # ==========================================
